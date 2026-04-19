@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Meonot</title>
+  <style>
+    body { font-family: Arial; background:#f5f5f5; }
+    .box { max-width:500px; margin:40px auto; background:white; padding:20px; border-radius:10px; }
+    input { width:70%; padding:10px; }
+    button { padding:10px; background:blue; color:white; border:none; border-radius:5px; }
+    .post { padding:10px; border-bottom:1px solid #ddd; }
+  </style>
+</head>
+
+<body>
+
+<div class="box">
+  <h2>Meonot 🚀</h2>
+
+  <input id="postInput" placeholder="Write something..." />
+  <button onclick="addPost()">Post</button>
+
+  <div id="feed"></div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBHLGESAFWlf-RV8D1y3-jLRk4W5fuQeBI",
+  authDomain: "meonot-e3ad2.firebaseapp.com",
+  projectId: "meonot-e3ad2"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+let currentUser = null;
+let username = localStorage.getItem("username");
+
+// 🔹 username setup
+if (!username) {
+  username = prompt("Enter your username:");
+  if (!username) username = "user";
+  localStorage.setItem("username", username);
+}
+
+// 🔹 login FIRST, then load posts
+auth.signInAnonymously().then(() => {
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      currentUser = user;
+      console.log("User ready");
+      loadPosts();
+    }
+  });
+});
+
+// 🔹 add post
+function addPost() {
+  if (!currentUser) {
+    alert("Still loading, wait 2 seconds...");
+    return;
+  }
+
+  const input = document.getElementById("postInput");
+  const text = input.value;
+
+  if (!text.trim()) return;
+
+  db.collection("posts").add({
+    text: text,
+    username: username,
+    time: Date.now()
+  })
+  .then(() => {
+    console.log("Saved");
+  })
+  .catch(e => {
+    console.error(e);
+    alert("Error: " + e.message);
+  });
+
+  input.value = "";
+}
+
+// 🔹 load posts
+function loadPosts() {
+  db.collection("posts")
+    .orderBy("time", "desc")
+    .onSnapshot(snapshot => {
+      let html = "";
+
+      snapshot.forEach(doc => {
+        const post = doc.data();
+        html += `<div class="post"><b>${post.username}</b>: ${post.text}</div>`;
+      });
+
+      document.getElementById("feed").innerHTML = html;
+    });
+}
+</script>
+
+</body>
+</html>
